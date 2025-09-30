@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "188179769382",
+    "project_id": "netech-pos-production",
+    "storage_bucket": "netech-pos-production.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:188179769382:android:b3d7aba6e1b12eb5b81ee7",
+        "android_client_info": {
+          "package_name": "com.example.netech_pos"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDUEZB5kVAoPiL__tbVyiBPjBF4ukjLsu8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:188179769382:android:eed225a437a93100b81ee7",
+        "android_client_info": {
+          "package_name": "com.netech.pos"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDUEZB5kVAoPiL__tbVyiBPjBF4ukjLsu8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

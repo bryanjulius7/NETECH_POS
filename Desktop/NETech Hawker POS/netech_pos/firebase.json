@@ -1,0 +1,65 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "emulators": {
+    "auth": {
+      "port": 9099
+    },
+    "firestore": {
+      "port": 8081
+    },
+    "storage": {
+      "port": 9199
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000
+    }
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "netech-pos-production",
+          "appId": "1:188179769382:android:b3d7aba6e1b12eb5b81ee7",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options_stg.dart": {
+          "projectId": "netech-pos-d382f",
+          "configurations": {
+            "android": "1:450687509485:android:3c8956511ac986289b3de4",
+            "ios": "1:450687509485:ios:5f922ab00bbb002d9b3de4",
+            "web": "1:450687509485:web:55e0d18c8739320f9b3de4"
+          }
+        },
+        "lib/firebase_options.dart": {
+          "projectId": "netech-pos-production",
+          "configurations": {
+            "android": "1:188179769382:android:b3d7aba6e1b12eb5b81ee7",
+            "web": "1:188179769382:web:cc30b159b10c3159b81ee7"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

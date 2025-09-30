@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "netech-pos-production",
+    "prod": "netech-pos-production"
+  },
+  "targets": {},
+  "etags": {}
+}

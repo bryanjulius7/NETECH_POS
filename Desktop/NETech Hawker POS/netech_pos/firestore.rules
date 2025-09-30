@@ -1,0 +1,239 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ========= Companies =========
+    match /companies/{companyId} {
+      allow read: if request.auth != null;
+      allow write: if isAdminOfCompany(companyId);
+    }
+
+    // ========= Settings =========
+    match /settings/{companyId} {
+      allow read: if request.auth != null
+                  && request.auth.token.companyId == companyId;
+      allow write: if isAdminOfCompany(companyId);
+    }
+
+    // ========= Stores =========
+    match /stores/{storeId} {
+      allow read: if request.auth != null
+                  && request.auth.token.companyId == resource.data.companyId;
+
+      allow create: if isAdminOfCompany(request.resource.data.companyId)
+                    && request.resource.data.keys().hasAll(['companyId','name','code']);
+
+      allow update: if isAdminOfCompany(resource.data.companyId)
+                    && request.resource.data.companyId == resource.data.companyId;
+
+      allow delete: if isAdminOfCompany(resource.data.companyId);
+    }
+
+// ========= Items =========
+match /items/{itemId} {
+
+  allow get, list: if
+    isAdminOfCompany(resource.data.companyId) ||
+    (isStaffOf(resource.data.companyId) &&
+     request.auth.token.storeId in resource.data.storeVisibility);
+
+  allow create: if isAdminOfCompany(request.resource.data.companyId)
+                && request.resource.data.keys().hasAll(
+                     ['companyId','name','price','categoryId','isActive','storeVisibility']
+                   );
+
+  allow update: if
+    isAdminOfCompany(resource.data.companyId) &&
+    request.resource.data.companyId == resource.data.companyId &&
+    request.resource.data
+      .diff(resource.data)
+      .changedKeys()
+      .hasOnly(['price','name','storeVisibility','updatedAt','categoryId','isActive']);
+
+  allow delete: if isAdminOfCompany(resource.data.companyId);
+}
+
+    // ========= Receipts =========
+    match /receipts/{receiptId} {
+      allow create: if request.auth != null
+                    && request.auth.token.companyId == request.resource.data.companyId
+                    && request.auth.token.storeId == request.resource.data.storeId;
+
+      allow read: if request.auth != null
+                  && request.auth.token.companyId == resource.data.companyId
+                  && (
+                       request.auth.token.role == 'admin'
+                       || request.auth.token.storeId == resource.data.storeId
+                     );
+
+      allow update: if isAdminOfCompany(resource.data.companyId);
+      allow delete: if false;
+    }
+
+    // ========= Counters =========
+    match /counters/{storeId} {
+      allow read, update: if request.auth != null
+                          && resource.data.companyId == request.auth.token.companyId
+                          && storeId == request.auth.token.storeId;
+
+      allow create: if isAdminOfCompany(request.resource.data.companyId);
+      allow delete: if false;
+    }
+
+    // ========= Attendance =========
+    match /attendance/{attId} {
+      function isStaffSelf() {
+        return request.auth != null
+            && request.auth.token.role == 'staff'
+            && request.auth.token.companyId == request.resource.data.companyId
+            && request.auth.token.storeId == request.resource.data.storeId
+            && request.auth.token.userId == request.resource.data.userId;
+      }
+
+      allow create: if isStaffSelf()
+                    && (
+                         !request.resource.data.keys().hasAny(['clockOut'])
+                         || request.resource.data.clockOut == null
+                       );
+
+      allow read: if request.auth != null && (
+                    (request.auth.token.role == 'admin'
+                      && request.auth.token.companyId == resource.data.companyId)
+                    ||
+                    (request.auth.token.role == 'staff'
+                      && request.auth.token.companyId == resource.data.companyId
+                      && request.auth.token.userId == resource.data.userId)
+                  );
+
+      allow update: if (
+        (
+          request.auth != null
+          && request.auth.token.role == 'staff'
+          && request.auth.token.companyId == resource.data.companyId
+          && request.auth.token.storeId == resource.data.storeId
+          && request.auth.token.userId == resource.data.userId
+
+          && request.resource.data.companyId == resource.data.companyId
+          && request.resource.data.storeId   == resource.data.storeId
+          && request.resource.data.userId    == resource.data.userId
+          && request.resource.data.clockIn   == resource.data.clockIn
+
+          && ( !resource.data.keys().hasAny(['clockOut']) || resource.data.clockOut == null )
+          && request.resource.data.keys().hasAny(['clockOut'])
+        )
+        || isAdminOfCompany(resource.data.companyId)
+      );
+
+      allow delete: if false;
+    }
+
+    // ========= Shifts =========
+    match /shifts/{shiftId} {
+      allow create: if (
+        isStaffOfStore(request.resource.data.companyId, request.resource.data.storeId)
+        || isAdminOfCompany(request.resource.data.companyId)
+      ) && (
+        !request.resource.data.keys().hasAny(['endedAt'])
+        || request.resource.data.endedAt == null
+      );
+
+      allow read: if (
+        isAdminOfCompany(resource.data.companyId)
+        || isStaffOfStore(resource.data.companyId, resource.data.storeId)
+      );
+
+      allow update: if (
+        (
+          isStaffOfStore(resource.data.companyId, resource.data.storeId)
+          && request.resource.data.companyId == resource.data.companyId
+          && request.resource.data.storeId   == resource.data.storeId
+          && request.resource.data.startedAt == resource.data.startedAt
+          && (
+               ( !resource.data.keys().hasAny(['endedAt']) || resource.data.endedAt == null )
+               ? request.resource.data.keys().hasAny(['endedAt'])
+               : true
+             )
+        )
+        || isAdminOfCompany(resource.data.companyId)
+      );
+
+      allow delete: if false;
+
+      // ========= Drawer Activity (subcollection) =========
+      match /drawer_activity/{entryId} {
+        allow create: if (
+          isStaffOfStore(request.resource.data.companyId, request.resource.data.storeId)
+          || isAdminOfCompany(request.resource.data.companyId)
+        );
+
+        allow read: if (
+          isAdminOfCompany(resource.data.companyId)
+          || isStaffOfStore(resource.data.companyId, resource.data.storeId)
+        );
+
+        allow update: if isAdminOfCompany(resource.data.companyId);
+        allow delete: if false;
+      }
+    }
+
+    // ========= Central Kitchen Orders =========
+    match /central_kitchen_orders/{orderId} {
+      allow create: if isStaffOfStore(request.resource.data.companyId,
+                                      request.resource.data.storeId)
+                    && (
+                         !request.resource.data.keys().hasAny(['status'])
+                         || request.resource.data.status == 'Requested'
+                       )
+                    && request.resource.data.keys().hasOnly([
+                         'companyId', 'storeId', 'items', 'createdAt', 'createdBy', 'status'
+                       ])
+                    && request.resource.data.companyId is string
+                    && request.resource.data.storeId   is string
+                    && request.resource.data.items      is list
+                    && request.resource.data.createdAt  is timestamp
+                    && request.resource.data.createdBy  is string;
+
+      allow read: if isAdminOfCompany(resource.data.companyId)
+                  || isStaffOfStore(resource.data.companyId, resource.data.storeId);
+
+      allow update: if isAdminOfCompany(resource.data.companyId)
+                    && request.resource.data.companyId == resource.data.companyId
+                    && request.resource.data.storeId   == resource.data.storeId
+                    && request.resource.data.items     == resource.data.items
+                    && request.resource.data.createdAt == resource.data.createdAt
+                    && request.resource.data.createdBy == resource.data.createdBy
+                    && request.resource.data.diff(resource.data).changedKeys().hasOnly(['status'])
+                    && (
+                         (resource.data.status == 'Requested'
+                           && (request.resource.data.status == 'Confirmed'
+                               || request.resource.data.status == 'Rejected'))
+                       );
+
+      allow delete: if false;
+    }
+
+    // ========= Utility Functions =========
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdminOfCompany(companyId) {
+      return request.auth != null
+             && request.auth.token.role == 'admin'
+             && request.auth.token.companyId == companyId;
+    }
+
+    function isStaffOf(companyId) {
+      return request.auth != null
+             && request.auth.token.role == 'staff'
+             && request.auth.token.companyId == companyId;
+    }
+
+    function isStaffOfStore(companyId, storeId) {
+      return request.auth != null
+             && request.auth.token.role == 'staff'
+             && request.auth.token.companyId == companyId
+             && request.auth.token.storeId   == storeId;
+    }
+  }
+}
