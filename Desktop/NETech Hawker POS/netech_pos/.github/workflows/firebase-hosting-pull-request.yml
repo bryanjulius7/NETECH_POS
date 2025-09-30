@@ -1,37 +1,51 @@
-name: Preview Hosting on PR
+name: Firebase Hosting PR Preview (Flutter Web)
 
 on:
+  # Run automatically for PRs targeting main
   pull_request:
     branches: [ main ]
+  # Allow manual runs from the Actions tab (helpful for debugging)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
 
 jobs:
   build_and_preview:
+    # Only run if the PR comes from the same repo (skip forks unless you allow them)
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      # Setup Flutter (stable)
-      - uses: subosito/flutter-action@v2
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter (stable)
+        uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          channel: 'stable'
           cache: true
 
-      - name: Flutter version
-        run: flutter --version
-
-      - name: Install deps
+      - name: Flutter pub get
         run: flutter pub get
 
-      - name: Build Flutter web
+      - name: Build Flutter web (release)
         run: flutter build web --release
 
-      # Deploy a preview channel for this PR
-      - name: Deploy Preview to Firebase Hosting
+      # Deploy a preview channel to Firebase Hosting.
+      # Requires:
+      #   - firebase.json at repo root (points "public" to build/web)
+      #   - Secret FIREBASE_SERVICE_ACCOUNT_NETECH_POS_PRODUCTION
+      #   - Correct "projectId" below (your prod project id)
+      - name: Deploy preview to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_NETECH_POS_PRODUCTION }}'
-          projectId: netech-pos-production
+          projectId: 'netech-pos-production'    # <-- your production Firebase project id
+          # Optional: make the channel explicit and expire in 7 days
           channelId: 'pr-${{ github.event.number }}'
-        env:
-          FIREBASE_CLI_EXPERIMENTS: webframeworks
+          expires: 7d
+          # Uses firebase.json at repo root; make sure "public": "build/web"
