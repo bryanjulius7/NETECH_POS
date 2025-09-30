@@ -1,0 +1,56 @@
+# This file was generated and adapted for Flutter web + Firebase Hosting preview deploys.
+# Docs: https://github.com/FirebaseExtended/action-hosting-deploy
+#       https://github.com/subosito/flutter-action
+
+name: Deploy to Firebase Hosting on PR
+
+on:
+  pull_request:
+    # Adjust to your default branch if needed
+    branches: [ main ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  build_and_preview:
+    # Only run for PRs from the same repo (not forks), keeps secrets safe
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      # (Optional) Cache Dart/Flutter pub dependencies to speed up builds
+      - name: Cache Pub packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          # Use the Flutter version your project is on
+          flutter-version: '3.24.0'
+          channel: 'stable'
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build Flutter Web (release)
+        run: flutter build web --release
+
+      # Deploy the build output (build/web) to a Firebase Hosting preview channel
+      - name: Deploy preview to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NETECH_POS_PRODUCTION }}
+          projectId: netech-pos-production
+          # If you ever customize your output dir, add "public" input, e.g.:
+          # public: build/web
